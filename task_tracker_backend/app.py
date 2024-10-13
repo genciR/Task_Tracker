@@ -1,16 +1,22 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from extensions import db
 from flask_migrate import Migrate
+from flask_restful import Api
 
 app = Flask(__name__)
-app.config('config')
+app.config.from_object('config.Config')
 
-db = SQLAlchemy(app)
-migrate=Migrate(app,db)
+db.init_app(app)
 
-from routes import init_routes
 
-init_routes(app)
+migrate = Migrate(app, db)
 
-if __name__=='__main__':
+
+api = Api(app)
+
+
+with app.app_context():
+    from models import User, Task, Skill, Assignment
+
+if __name__ == '__main__':
     app.run(debug=True)
