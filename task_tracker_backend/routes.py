@@ -1,9 +1,9 @@
 from flask import request,jsonify
 from flask_restful import Api, Resource
-from models import db, User,Task,Skill,Assignment
+from models import db, User,Task,Skill,Assignment 
 
 
-api=Api()
+
     
 
 ########### Endpoints for  the User---
@@ -20,13 +20,44 @@ class UserList(Resource):
     
 ##to retrive all
   
+  
     def post(self):
-        data=request.get_json()
-        new_user=User(name=data['name'],email=data['email'],role=data['role'])
+        data = request.get_json()
+        
+       
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({"error": "User with this email already exists"}), 409
+        
+       
+        new_user = User(name=data['name'], email=data['email'], role=data['role'])
         db.session.add(new_user)
-        db.session.commit()
-        return jsonify(new_user.serialize()),201
-  ##post method  
+        try:
+            db.session.commit()
+            return jsonify(new_user.serialize()), 201
+        except Exception as e:
+            db.session.rollback() 
+            return jsonify({"error": str(e)}), 400
+
+            
+    def put(self, user_id):
+        data = request.get_json()
+        user = User.query.get(user_id)
+    
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+    
+        user.name = data.get('name', user.name)
+        user.email = data.get('email', user.email)
+        user.role = data.get('role', user.role)
+    
+        try:
+            db.session.commit()
+            return jsonify(user.serialize()), 200
+        except Exception as e:
+             db.session.rollback()
+             return jsonify({"error": str(e)}), 400
 
 
 class TaskList(Resource):
@@ -116,14 +147,13 @@ class SkillList(Resource):
         
 ###the routes
 
-def init_routes(app):
-    api.add_resource(UserList, '/users')
-    api.add_resource(UserDetail, '/users/<int:id>')
-    api.add_resource(TaskList, '/tasks')
-    api.add_resource(TaskDetail, '/tasks/<int:id>')
-    api.add_resource(AssignmentList, '/assignments')
-    api.add_resource(AssignmentDetails, '/assignments/<int:id>')
-    api.add_resource(SkillList, '/skills')
-    api.init_app(app)
-
+def init_routes(api):
+    api.add_resource(UserList, '/api/users')
+    api.add_resource(UserDetail, '/api/users/<int:id>')
+    api.add_resource(TaskList, '/api/tasks')
+    api.add_resource(TaskDetail, '/api/tasks/<int:id>')
+    api.add_resource(AssignmentList, '/api/assignments')
+    api.add_resource(AssignmentDetails, '/api/assignments/<int:id>')
+    api.add_resource(SkillList, '/api/skills')
+  
 
