@@ -11,8 +11,34 @@ class UserDetail(Resource):
     def get(self,id):
         user=User.query.get_or_404(id)
         return jsonify(user.serialize())
-##get by id
+    
 
+
+##get by id
+    def put(self, id):
+        data = request.get_json()
+        user = User.query.get(id)
+    
+        if not user:
+            print("User not found")
+            return jsonify({"error": "User not found"}), 404
+
+    
+        user.name = data.get('name', user.name)
+        user.email = data.get('email', user.email)
+        user.role = data.get('role', user.role)
+    
+        try:
+            db.session.commit()
+            print("User updated successfully")
+            return jsonify(user.serialize()), 200
+        except Exception as e:
+             db.session.rollback()
+             print(f"Error during update: {str(e)}")
+             return jsonify({"error": str(e)}), 400
+        
+
+        
 class UserList(Resource):
     def get(self):
         users=User.query.all()
@@ -40,24 +66,7 @@ class UserList(Resource):
             return jsonify({"error": str(e)}), 400
 
             
-    def put(self, user_id):
-        data = request.get_json()
-        user = User.query.get(user_id)
     
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-    
-        user.name = data.get('name', user.name)
-        user.email = data.get('email', user.email)
-        user.role = data.get('role', user.role)
-    
-        try:
-            db.session.commit()
-            return jsonify(user.serialize()), 200
-        except Exception as e:
-             db.session.rollback()
-             return jsonify({"error": str(e)}), 400
 
 
 class TaskList(Resource):

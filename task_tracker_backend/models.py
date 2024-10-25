@@ -19,7 +19,7 @@ class User(db.Model):
         }
 
 class Task(db.Model):
-    __tablename__ = 'tasks'  # Ensure the table name matches your database
+    __tablename__ = 'tasks'  
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
@@ -41,7 +41,7 @@ class Task(db.Model):
         }
 
 class Skill(db.Model):
-    __tablename__ = 'skills'  # Make sure this matches your DB
+    __tablename__ = 'skills'  
     id = db.Column(db.Integer, primary_key=True)
     skill_name = db.Column(db.String(50), nullable=False)
 
@@ -52,7 +52,7 @@ class Skill(db.Model):
         }
 
 class Assignment(db.Model):
-    __tablename__ = 'assignments'  # Ensure the table name matches your database
+    __tablename__ = 'assignments'  
     id = db.Column(db.Integer, primary_key=True)
     task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
