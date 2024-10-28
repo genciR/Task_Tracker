@@ -3,7 +3,7 @@ from extensions import db
 from flask_migrate import Migrate
 from flask_restful import Api
 from routes import init_routes 
-
+from schemas import UserSchema
 
 app = Flask(__name__)
 app.config.from_object('config.Config')

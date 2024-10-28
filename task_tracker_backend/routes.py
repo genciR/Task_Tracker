@@ -1,16 +1,19 @@
 from flask import request,jsonify
 from flask_restful import Api, Resource
 from models import db, User,Task,Skill,Assignment 
-
+from schemas import UserSchema
 
 
     
 
+schema=UserSchema()
+users_schema=UserSchema(many=True)
 ########### Endpoints for  the User---
 class UserDetail(Resource):
     def get(self,id):
+        from schemas import UserSchema 
         user=User.query.get_or_404(id)
-        return jsonify(user.serialize())
+        return users_schema.jsonify(user)
     
 
 
@@ -23,7 +26,7 @@ class UserDetail(Resource):
             print("User not found")
             return jsonify({"error": "User not found"}), 404
 
-    
+        user_data = schema.load(data) 
         user.name = data.get('name', user.name)
         user.email = data.get('email', user.email)
         user.role = data.get('role', user.role)
@@ -31,7 +34,7 @@ class UserDetail(Resource):
         try:
             db.session.commit()
             print("User updated successfully")
-            return jsonify(user.serialize()), 200
+            return schema.jsonify(user), 200
         except Exception as e:
              db.session.rollback()
              print(f"Error during update: {str(e)}")
@@ -42,28 +45,27 @@ class UserDetail(Resource):
 class UserList(Resource):
     def get(self):
         users=User.query.all()
-        return jsonify([user.serialize() for user in users])
+        return users_schema.jsonify(users)
     
 ##to retrive all
   
   
     def post(self):
         data = request.get_json()
+        try: 
+            user_data=schema.load(data)
+            existing_user = User.query.filter_by(email=data['email']).first()
+            if existing_user:
+                return jsonify({"error": "User with this email already exists"}), 409
         
        
-        existing_user = User.query.filter_by(email=data['email']).first()
-        if existing_user:
-            return jsonify({"error": "User with this email already exists"}), 409
-        
-       
-        new_user = User(name=data['name'], email=data['email'], role=data['role'])
-        db.session.add(new_user)
-        try:
+            new_user = User(name=data['name'], email=data['email'], role=data['role'])
+            db.session.add(new_user)
             db.session.commit()
-            return jsonify(new_user.serialize()), 201
+            return schema.jsonify(new_user.serialize()), 201
         except Exception as e:
-            db.session.rollback() 
-            return jsonify({"error": str(e)}), 400
+                db.session.rollback() 
+                return jsonify({"error": str(e)}), 400
 
             
     
