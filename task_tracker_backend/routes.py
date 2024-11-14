@@ -2,6 +2,8 @@ from flask import request,jsonify
 from flask_restful import Api, Resource
 from models import db, User,Task,Skill,Assignment 
 from schemas import UserSchema
+from flask_jwt_extended import create_access_token,get_jwt_identity,jwt_required
+from extensions import pwd_context
 
 
     
@@ -40,7 +42,8 @@ class UserDetail(Resource):
              print(f"Error during update: {str(e)}")
              return jsonify({"error": str(e)}), 400
         
-
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
         
 class UserList(Resource):
     def get(self):
@@ -49,35 +52,68 @@ class UserList(Resource):
     
 ##to retrive all
   
-  
+    @get_jwt_identity
     def post(self):
+        current_user = get_jwt_identity()
+        
+        if current_user['role'] != 'admin':
+            return jsonify({"error": "You do not have permission to perform this action."}), 403
+        
         data = request.get_json()
         try: 
             user_data=schema.load(data)
             existing_user = User.query.filter_by(email=data['email']).first()
             if existing_user:
                 return jsonify({"error": "User with this email already exists"}), 409
-        
+        ##here i have to haash password
+            password=data['password']
+            hashed_password=pwd_context.hash(data['password'])
        
-            new_user = User(name=data['name'], email=data['email'], role=data['role'])
+            new_user = User(
+                name=data['name'],
+                  email=data['email'],
+                    role=data['role'],
+                    password=hashed_password
+                    )
+            
             db.session.add(new_user)
             db.session.commit()
-            return schema.jsonify(new_user.serialize()), 201
+            return user_schema.jsonify(new_user.serialize()), 201
         except Exception as e:
                 db.session.rollback() 
                 return jsonify({"error": str(e)}), 400
 
-            
+class UserLogin(Resource):
+    def post(self):
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+
+        # Check if the user exists
+        user = User.query.filter_by(email=email).first()
+        if not user or not pwd_context.verify(password, user.password):
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        # Generate JWT token
+        access_token = create_access_token(identity={"id": user.id, "role": user.role})
+        return jsonify(access_token=access_token), 200   
     
 
 
 class TaskList(Resource):
+
     def get(self):
         tasks=Task.query.all()
         return jsonify([task.serialize() for task in tasks])
-
     
+    @jwt_required()
     def post(self):
+
+        current_user=get_jwt_identity()
+
+        if current_user['role']not in['admin','teamlead']:
+            return jsonify({"error":"You do not have permission to perform this action."}),403
+        
         data = request.get_json()
         new_task=Task(
             title=data['title'],
@@ -95,9 +131,14 @@ class TaskDetail(Resource):
     def get(self,id):
         task=Task.query.get_or_404(id)
         return jsonify([task.serialize()])
-    
+    @jwt_required()
     def put(self,id):
+        current_user=get_jwt_identity()
         task=Task.query.get_or_404(id)
+
+        if current_user['role'] == 'team_member' and task.user_id != current_user['id']:
+            return jsonify({"error": "You can only update your own tasks."}), 403
+        
         data=request.get_json()
         task.title=data.get('title',task.title)
         task.description = data.get('description', task.description)
@@ -105,7 +146,7 @@ class TaskDetail(Resource):
         task.priority = data.get('priority', task.priority)
         task.deadline=data.get('deadline',task.deadline)
         db.session.commit()
-        return jsonify(task.serialize())
+        return jsonify(task.serialize()),200
 
     def delete(self, id):
         task=Task.query.get_or_404(id)
@@ -161,6 +202,7 @@ class SkillList(Resource):
 def init_routes(api):
     api.add_resource(UserList, '/api/users')
     api.add_resource(UserDetail, '/api/users/<int:id>')
+    api.add_resource(UserLogin, '/api/login') 
     api.add_resource(TaskList, '/api/tasks')
     api.add_resource(TaskDetail, '/api/tasks/<int:id>')
     api.add_resource(AssignmentList, '/api/assignments')

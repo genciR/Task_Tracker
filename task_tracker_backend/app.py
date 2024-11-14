@@ -1,5 +1,5 @@
 from flask import Flask
-from extensions import db,cors
+from extensions import db,cors,jwt
 from flask_migrate import Migrate
 from flask_restful import Api
 from routes import init_routes 
@@ -13,7 +13,7 @@ app.config['JWT_SECRET_KEY'] = 'sdkfjhdsi3839!nkjdf4nNNNdn'
 db.init_app(app)
 migrate = Migrate(app, db)
 cors.init_app(app,resources={r"/api/*":{"origins":["http//localhost"]}})
-# jwt.init_app(app)
+jwt.init_app(app)
 
 api = Api(app)
 init_routes(api)

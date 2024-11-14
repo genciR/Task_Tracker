@@ -6,5 +6,7 @@ from  flask_marshmallow import Marshmallow
 db = SQLAlchemy()
 ma=Marshmallow()
 cors=CORS()
+
 pwd_context=CryptContext(schemes=["pbkdf2_sha256"],deprecated="auto")
-# jwt=JWTManager()
+
+jwt=JWTManager()
